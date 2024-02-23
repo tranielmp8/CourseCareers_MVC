@@ -1,5 +1,5 @@
 import prisma from './prisma.js';
-await prisma.user.deleteMany();
+// await prisma.user.deleteMany();
 await prisma.user.createMany({
     data: [
         { email: 'kakashi@gmai.com', username: 'kakashi' },
