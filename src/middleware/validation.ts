@@ -1,44 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
-import addFormats from 'ajv-formats';
-import Ajv from 'ajv';
-import { betterAjvErrors } from '@apideck/better-ajv-errors';
-import xss, { whiteList } from 'xss';
+import z from 'zod'
 
-const ajv = new Ajv();
-addFormats(ajv);
+const UserSchema = z.object({
+  username: z.string().min(5, 'at least 5 chars').max(50, 'at most 50 chars'),
+  email: z.string().email(),
+});
 
-const schema = {
-    type: 'object',
-    properties: {
-        username: {
-            type: 'string',
-            minLength: 5,
-            maxLength: 50,
-        },
-        email: {
-            type: 'string',
-            format: 'email',
-        },
-    },
-    required: ['username', 'email'],
-};
+type User = z.infer<typeof UserSchema>;
 
-const validate = ajv.compile(schema);
 
-const validateAccount = (req: Request, res: Response, next: NextFunction) => {
+const validateAccount = (req: Request<unknown, unknown, User>, res: Response, next: NextFunction) => {
+  const validation = UserSchema.safeParse(req.body);
 
-    const valid = validate(req.body);
+  if(!validation.success){
+    return res.status(400).json({errors: validation.error.issues})
+  }
 
-    if (!valid) {
-        res.status(400).json({
-            error: 'Invalid request body',
-            details: validate.errors,
-        });
-        return;
-    }
+  next();
+}
 
-    next();
-};
+
+export default { validateAccount }
+
 
 // const validateAccount = (req: Request, res: Response, next: NextFunction) => {
 //   const valid = validate(req.body);
@@ -59,5 +42,3 @@ const validateAccount = (req: Request, res: Response, next: NextFunction) => {
 
 //   next();
 // };
-
-export default { validateAccount };
