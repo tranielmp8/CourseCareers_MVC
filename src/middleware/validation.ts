@@ -1,17 +1,63 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from 'express';
+import addFormats from 'ajv-formats';
+import Ajv from 'ajv';
+import { betterAjvErrors } from '@apideck/better-ajv-errors';
+import xss, { whiteList } from 'xss';
 
+const ajv = new Ajv();
+addFormats(ajv);
 
-const validateUsername = (req: Request, res: Response, next: NextFunction) => {
-  const username = req?.body?.username;
+const schema = {
+    type: 'object',
+    properties: {
+        username: {
+            type: 'string',
+            minLength: 5,
+            maxLength: 50,
+        },
+        email: {
+            type: 'string',
+            format: 'email',
+        },
+    },
+    required: ['username', 'email'],
+};
 
-  if(!username || username.length < 5 || username.length > 30) {
-    return res.status(400)
-      .json({error: 'username must be between 5 - 30 characters'})
-  }
+const validate = ajv.compile(schema);
 
-  next();
-}
+const validateAccount = (req: Request, res: Response, next: NextFunction) => {
 
-export default {
-  validateUsername
-}
+    const valid = validate(req.body);
+
+    if (!valid) {
+        res.status(400).json({
+            error: 'Invalid request body',
+            details: validate.errors,
+        });
+        return;
+    }
+
+    next();
+};
+
+// const validateAccount = (req: Request, res: Response, next: NextFunction) => {
+//   const valid = validate(req.body);
+
+//   if (!valid) {
+//       const betterErrors = betterAjvErrors({
+//           schema,
+//           data: req.body,
+//           errors: validate.errors,
+//           basePath: '',
+//       });
+
+//       res.status(400).json({
+//           error: betterErrors,
+//       });
+//       return;
+//   }
+
+//   next();
+// };
+
+export default { validateAccount };
